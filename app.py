@@ -4,21 +4,23 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-# --- CONFIGURACIÓN DE CORREO ---
-# RECUERDA: Usa tu 'App Password' de 16 letras de Google, no tu clave normal
-MI_CORREO = "lgil32@gmail.com" 
-MI_PASSWORD = "dlkn cnpz cera lphi" 
+# --- CONFIGURACIÓN ---
+# Asegúrate de poner tus 16 letras amarillas aquí
+MI_CORREO = "tu_correo@gmail.com" 
+MI_PASSWORD = "aquilas16letras" 
 
-def enviar_email(vendedor, fecha, df_final, total_monto, total_diff):
+def enviar_email(vendedor, fecha, df_final, total_monto, total_diff, neto):
     asunto = f"Reporte: {vendedor} - {fecha}"
+    
     tabla_texto = df_final.to_string(index=False)
     
     cuerpo = f"Nuevo Reporte de Cobranza:\n\n{tabla_texto}\n\n"
     cuerpo += f"----------------------------------\n"
-    cuerpo += f"TOTAL CANCELADO: ${total_monto:,.2f}\n"
-    cuerpo += f"TOTAL DIFERENCIA: ${total_diff:,.2f}\n"
+    cuerpo += f"TOTAL CANCELADO:   ${total_monto:,.2f}\n"
+    cuerpo += f"TOTAL DIFERENCIA:  ${total_diff:,.2f}\n"
+    cuerpo += f"NETO A ENTREGAR:   ${neto:,.2f}\n" # <--- Agregado al correo
     cuerpo += f"----------------------------------\n"
-    cuerpo += "Este reporte ha sido enviado y bloqueado."
+    cuerpo += "Este reporte ha sido enviado y bloqueado contra modificaciones."
 
     msg = MIMEMultipart()
     msg['From'] = MI_CORREO
@@ -29,47 +31,51 @@ def enviar_email(vendedor, fecha, df_final, total_monto, total_diff):
     try:
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
-        server.login(MI_CORREO, MI_PASSWORD)
+        server.login(MI_CORREO.strip(), MI_PASSWORD.strip())
         server.send_message(msg)
         server.quit()
         return True
     except Exception as e:
-        st.error(f"Error al conectar con el correo: {e}")
+        st.error(f"Error de envío: {e}")
         return False
 
 # --- INTERFAZ ---
 st.set_page_config(page_title="App Cobranza", layout="centered")
 st.title("📲 Reporte de Cobranza")
 
-# 1. Datos del encabezado
-col1, col2 = st.columns(2)
-vendedor = col1.selectbox("Nombre del Cobrador", ["Vendedor 1", "Vendedor 2", "Vendedor 3"])
-fecha = col2.date_input("Fecha")
+vendedor = st.selectbox("Nombre del Cobrador", ["Vendedor 1", "Vendedor 2", "Vendedor 3"])
+fecha = st.date_input("Fecha")
 
-# 2. Tabla de 20 filas (Formato simplificado)
-st.write("### Complete los cobros (hasta 20 filas)")
 df_init = pd.DataFrame(
     {"Cliente": [""]*20, "Factura": [""]*20, "Monto": [0.0]*20, "Diferencia": [0.0]*20}
 )
 
-# Capturamos la edición
+st.write("### Complete los cobros")
 df_editado = st.data_editor(df_init, use_container_width=True, hide_index=True)
 
-# 3. Lógica de Envío
+# Cálculos en tiempo real para que el vendedor vea el Neto antes de enviar
+res_preview = pd.DataFrame(df_editado)
+res_preview = res_preview[res_preview["Cliente"].str.strip() != ""]
+
+if not res_preview.empty:
+    monto_p = res_preview["Monto"].sum()
+    diff_p = res_preview["Diferencia"].sum()
+    neto_p = monto_p - diff_p
+    st.info(f"**Resumen actual:** Total: ${monto_p:,.2f} | Dif: ${diff_p:,.2f} | **Neto: ${neto_p:,.2f}**")
+
 if st.button("ENVIAR REPORTE FINAL"):
-    # Convertimos a DataFrame real y filtramos filas vacías
     res = pd.DataFrame(df_editado)
     res = res[res["Cliente"].str.strip() != ""]
     
     if not res.empty:
         total_monto = res["Monto"].sum()
         total_diff = res["Diferencia"].sum()
+        neto_entregar = total_monto - total_diff # <--- Cálculo de la resta
         
-        with st.spinner('Procesando envío...'):
-            if enviar_email(vendedor, str(fecha), res, total_monto, total_diff):
-                st.success("✅ ¡Enviado con éxito! El reporte ha sido bloqueado.")
+        with st.spinner('Enviando al correo...'):
+            if enviar_email(vendedor, str(fecha), res, total_monto, total_diff, neto_entregar):
+                st.success(f"✅ ¡Enviado! Neto a entregar: ${neto_entregar:,.2f}")
                 st.balloons()
-                st.info("Para un nuevo reporte, recargue la página.")
-                st.stop() # Detiene la app para cumplir tu regla de "no modificación"
+                st.stop() 
     else:
-        st.warning("⚠️ La tabla está vacía. Ingrese datos del cliente.")
+        st.warning("⚠️ Escriba al menos un cliente.")
