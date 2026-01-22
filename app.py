@@ -6,8 +6,8 @@ from email.mime.multipart import MIMEMultipart
 
 # --- CONFIGURACIÓN ---
 # Asegúrate de poner tus 16 letras amarillas aquí
-MI_CORREO = "tu_correo@gmail.com" 
-MI_PASSWORD = "aquilas16letras" 
+MI_CORREO = "lgil32@gmail.com" 
+MI_PASSWORD = "dlkn cnpz cera lphi" 
 
 def enviar_email(vendedor, fecha, df_final, total_monto, total_diff, neto):
     asunto = f"Reporte: {vendedor} - {fecha}"
