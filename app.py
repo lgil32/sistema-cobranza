@@ -6,8 +6,8 @@ from email.mime.multipart import MIMEMultipart
 
 # --- CONFIGURACIÓN DE CORREO ---
 # RECUERDA: Usa tu 'App Password' de 16 letras de Google, no tu clave normal
-MI_CORREO = "tu_correo@gmail.com" 
-MI_PASSWORD = "tu_clave_de_16_letras" 
+MI_CORREO = "lgil32@gmail.com" 
+MI_PASSWORD = "dlkn cnpz cera lphi" 
 
 def enviar_email(vendedor, fecha, df_final, total_monto, total_diff):
     asunto = f"Reporte: {vendedor} - {fecha}"
